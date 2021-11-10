@@ -1,6 +1,7 @@
 import * as bunyan from 'bunyan'
 import { Request, Response } from 'express'
 import { BaseLogger } from './base.logging'
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 export const createLocalLogger = async () => {
   const logger = bunyan.createLogger({
