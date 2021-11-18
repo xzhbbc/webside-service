@@ -1,11 +1,12 @@
 import * as bunyan from 'bunyan'
 import { Request, Response } from 'express'
 import { BaseLogger } from './base.logging'
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
+import { serviceLogName } from '@/config/constants'
 
 export const createLocalLogger = async () => {
   const logger = bunyan.createLogger({
-    name: 'myapp',
+    name: `${serviceLogName}`,
     streams: [{ stream: process.stdout, level: 'debug' }]
   })
 

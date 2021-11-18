@@ -4,12 +4,15 @@ import { createLogger } from './help/logging'
 import { HttpExceptionFilter } from './help/interceptor/http-exception.filter'
 import { SuccessInterceptor } from './help/interceptor/success.interceptor'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import { fileProject, serviceLogName } from '@/config/constants'
+import { NestExpressApplication } from '@nestjs/platform-express'
 
 async function bootstrap() {
   const { logger, mw, baseLogger } = await createLogger()
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger
   })
+  app.useStaticAssets(fileProject.viewPath)
   // 全局成功拦截器
   app.useGlobalInterceptors(new SuccessInterceptor())
   app.enableCors({
@@ -22,8 +25,8 @@ async function bootstrap() {
   app.use(mw)
   if (process.env.BUILD_ENV != 'prod') {
     const options = new DocumentBuilder()
-      .setTitle('nest模板')
-      .setDescription('nest模板===')
+      .setTitle(`${serviceLogName}`)
+      .setDescription(`${serviceLogName}, 用于处理ide代码`)
       .setVersion('1.0')
       .addTag('nest')
       .addBearerAuth()
