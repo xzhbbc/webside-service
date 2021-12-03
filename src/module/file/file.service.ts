@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { CodeDto, FileDto } from '@/module/file/file.swagger'
-import { codeTemplate, fileProject } from '@/config/constants'
+import { canWriteFile, codeTemplate, fileProject } from '@/config/constants'
 import {
   readFileSync,
   existsSync,
@@ -20,10 +20,19 @@ export class FileService {
     console.log('开始构建')
     return new Promise(resolve => {
       try {
-        exec(`cd ${fileProject.viewPathSrc} && yarn lint && yarn build`, () => {
-          console.log('构建结束')
-          resolve(true)
-        })
+        exec(
+          `cd ${fileProject.viewPathSrc} && yarn lint && yarn build`,
+          (err, stdout, stderr) => {
+            if (err) {
+              console.log(err)
+              resolve(false)
+            }
+            console.log('stdout:', stdout)
+            console.log('stderr:', stderr)
+            console.log('构建结束')
+            resolve(true)
+          }
+        )
       } catch (err) {
         console.log('构建失败', err)
         resolve(false)
@@ -42,6 +51,7 @@ export class FileService {
         fileList.unshift({
           name: file,
           title: file,
+          parent: Utils.replacePath(dir.split(fileProject.templatePath)[1]),
           key: `${lastIndex}-${i}`,
           path: Utils.replacePath(pathDir.split(fileProject.templatePath)[1]),
           type: 'directory'
@@ -51,6 +61,7 @@ export class FileService {
           name: file,
           title: file,
           key: `${lastIndex}-${i}`,
+          parent: Utils.replacePath(dir.split(fileProject.templatePath)[1]),
           path: Utils.replacePath(pathDir.split(fileProject.templatePath)[1]),
           type: 'directory',
           children: this.getFileCatalog(pathDir, `${lastIndex}-${i}`)
@@ -60,6 +71,7 @@ export class FileService {
           name: file,
           title: file,
           key: `${lastIndex}-${i}`,
+          parent: Utils.replacePath(dir.split(fileProject.templatePath)[1]),
           path: Utils.replacePath(pathDir.split(fileProject.templatePath)[1]),
           type: 'file'
         })
@@ -85,19 +97,38 @@ export class FileService {
       join(fileProject.templatePath, data.name),
       'utf8'
     )
-    const template = VueHandler.getTemplate(pageData)
-    const script = VueHandler.getScript(pageData)
-    const css = VueHandler.getCss(pageData)
-    return {
-      template,
-      script,
-      css
+    if (data.name.indexOf(canWriteFile) > -1) {
+      const template = VueHandler.getTemplate(pageData)
+      const script = VueHandler.getScript(pageData)
+      const css = VueHandler.getCss(pageData)
+      return {
+        template,
+        script,
+        css,
+        justRead: false
+      }
+    } else {
+      if (data.name.indexOf('css') > -1) {
+        return {
+          css: pageData,
+          script: '',
+          template: '',
+          justRead: true
+        }
+      } else {
+        return {
+          css: '',
+          script: pageData,
+          template: '',
+          justRead: true
+        }
+      }
     }
   }
 
   async setCode(data: CodeDto) {
     console.log(data)
-    const vueFile = `${fileProject.viewPathVue}/${data.name}/index.vue`
+    const vueFile = `${fileProject.templatePath}${data.name}`
     const code = `${data.html}
 
 ${data.script}
