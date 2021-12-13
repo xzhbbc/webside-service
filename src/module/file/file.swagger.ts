@@ -18,3 +18,8 @@ export class CodeDto {
   @ApiProperty({ description: 'fileName' })
   readonly name: string
 }
+
+export class ProjectDto {
+  @ApiProperty({ description: '项目名' })
+  readonly name: string
+}

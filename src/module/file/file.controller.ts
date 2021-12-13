@@ -3,7 +3,7 @@ import { FileService } from './file.service'
 import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger'
 import { UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
-import { CodeDto, FileDto } from '@/module/file/file.swagger'
+import { CodeDto, FileDto, ProjectDto } from "@/module/file/file.swagger";
 @ApiTags('file:新建页面')
 @ApiBearerAuth()
 @Controller('file')
@@ -46,7 +46,31 @@ export class FileController {
 
   @ApiResponse({ description: '获取目录' })
   @Get('/getCatalog')
-  async getCatalog() {
-    return this.fileService.getCatalog()
+  async getCatalog(@Query() body: ProjectDto) {
+    return this.fileService.getCatalog(body)
+  }
+
+  @ApiResponse({ description: '获取项目目录' })
+  @Get('/getProject')
+  async getProject() {
+    return this.fileService.getProject()
+  }
+
+  @ApiResponse({ description: '设置' })
+  @Get('/setCmd')
+  async setCmd(@Query() body: ProjectDto) {
+    return this.fileService.setCmd(body)
+  }
+
+  @ApiResponse({ description: '获取信号' })
+  @Get('/getSignalList')
+  async getSignalList() {
+    return this.fileService.getSignalList()
+  }
+
+  @ApiResponse({ description: '清理项目进程' })
+  @Get('/killProject')
+  async killProject(@Query() body: ProjectDto) {
+    return this.fileService.killProject(body)
   }
 }

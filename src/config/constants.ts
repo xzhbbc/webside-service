@@ -16,6 +16,8 @@ export const fileProject = {
   templatePath: join(__dirname, templatePath)
 }
 
+export const viewProject = join(__dirname, '../../project')
+
 export const canWriteFile = 'src/views'
 
 export const codeTemplate = {

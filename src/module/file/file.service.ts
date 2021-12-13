@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common'
-import { CodeDto, FileDto } from '@/module/file/file.swagger'
-import { canWriteFile, codeTemplate, fileProject } from '@/config/constants'
+import { Body, Injectable } from '@nestjs/common'
+import { CodeDto, FileDto, ProjectDto } from '@/module/file/file.swagger'
+import {
+  canWriteFile,
+  codeTemplate,
+  fileProject,
+  viewProject
+} from '@/config/constants'
 import {
   readFileSync,
   existsSync,
@@ -9,19 +14,81 @@ import {
   statSync
 } from 'fs'
 import * as fs from 'fs-extra'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
+import { platform } from 'os'
 import VueHandler from '@/utils/vueHandler'
 import { join } from 'path'
 import Utils from '@/utils/utils'
 
 @Injectable()
 export class FileService {
+  private signalList: Record<any, any>
+  private processList: Record<any, any>
+  constructor() {
+    this.signalList = {}
+    this.processList = {}
+  }
+
+  private async killPort(port: string) {
+    const cmd = platform() == 'win32' ? 'netstat -ano' : 'ps aux'
+    return new Promise(resolve => {
+      const mainProcess = exec(cmd, function (err, stdout, stderr) {
+        if (err) {
+          console.log(err)
+          mainProcess.kill()
+          resolve(false)
+        }
+
+        stdout.split('\n').filter(function (line) {
+          const p = line.trim().split(/\s+/)
+          const address = p[1]
+
+          if (address != undefined) {
+            if (address.split(':')[1] == port) {
+              const subProcess = exec(
+                'taskkill /F /pid ' + p[4],
+                function (err, stdout, stderr) {
+                  if (err) {
+                    console.log('释放指定端口失败！！')
+                    subProcess.kill()
+                    resolve(false)
+                  }
+                  subProcess.kill()
+                  resolve(true)
+                }
+              )
+            }
+          }
+        })
+      })
+    })
+  }
+
+  private async runProject(path: string, name: string) {
+    return new Promise(resolve => {
+      const process = exec(`cd ${path} && yarn dev`, (err, stdout, stderr) => {
+        if (err) {
+          console.log(err)
+          delete this.signalList[name]
+          process.kill()
+        }
+        console.log('stdout:', stdout)
+        console.log('stderr:', stderr)
+        console.log('构建结束outer===')
+        delete this.signalList[name]
+        process.kill()
+      })
+      this.signalList[name] = process.pid
+      resolve(true)
+    })
+  }
+
   private async buildFile() {
     console.log('开始构建')
     return new Promise(resolve => {
       try {
         exec(
-          `cd ${fileProject.viewPathSrc} && yarn lint && yarn build`,
+          `cd ${fileProject.viewPathSrc} && yarn lint`,
           (err, stdout, stderr) => {
             if (err) {
               console.log(err)
@@ -40,7 +107,7 @@ export class FileService {
     })
   }
 
-  private getFileCatalog(dir, lastIndex) {
+  private getFileCatalog(dir, lastIndex, originalDir) {
     const files = readdirSync(dir)
     const fileList = []
     files.forEach((file, i) => {
@@ -51,9 +118,9 @@ export class FileService {
         fileList.unshift({
           name: file,
           title: file,
-          parent: Utils.replacePath(dir.split(fileProject.templatePath)[1]),
+          parent: Utils.replacePath(dir.split(originalDir)[1]),
           key: `${lastIndex}-${i}`,
-          path: Utils.replacePath(pathDir.split(fileProject.templatePath)[1]),
+          path: Utils.replacePath(pathDir.split(originalDir)[1]),
           type: 'directory'
         })
       } else if (fileMsg.isDirectory()) {
@@ -61,18 +128,22 @@ export class FileService {
           name: file,
           title: file,
           key: `${lastIndex}-${i}`,
-          parent: Utils.replacePath(dir.split(fileProject.templatePath)[1]),
-          path: Utils.replacePath(pathDir.split(fileProject.templatePath)[1]),
+          parent: Utils.replacePath(dir.split(originalDir)[1]),
+          path: Utils.replacePath(pathDir.split(originalDir)[1]),
           type: 'directory',
-          children: this.getFileCatalog(pathDir, `${lastIndex}-${i}`)
+          children: this.getFileCatalog(
+            pathDir,
+            `${lastIndex}-${i}`,
+            originalDir
+          )
         })
       } else {
         fileList.push({
           name: file,
           title: file,
           key: `${lastIndex}-${i}`,
-          parent: Utils.replacePath(dir.split(fileProject.templatePath)[1]),
-          path: Utils.replacePath(pathDir.split(fileProject.templatePath)[1]),
+          parent: Utils.replacePath(dir.split(originalDir)[1]),
+          path: Utils.replacePath(pathDir.split(originalDir)[1]),
           type: 'file'
         })
       }
@@ -93,11 +164,8 @@ export class FileService {
   }
 
   async getCode(data: FileDto) {
-    const pageData = readFileSync(
-      join(fileProject.templatePath, data.name),
-      'utf8'
-    )
-    if (data.name.indexOf(canWriteFile) > -1) {
+    const pageData = readFileSync(join(viewProject, data.name), 'utf8')
+    if (data.name.indexOf('.vue') > -1) {
       const template = VueHandler.getTemplate(pageData)
       const script = VueHandler.getScript(pageData)
       const css = VueHandler.getCss(pageData)
@@ -127,25 +195,41 @@ export class FileService {
   }
 
   async setCode(data: CodeDto) {
+    const path = join(viewProject, data.name)
+    if (!existsSync(path)) {
+      return {
+        msg: '不存在改项目',
+        code: 1
+      }
+    }
     console.log(data)
-    const vueFile = `${fileProject.templatePath}${data.name}`
-    const code = `${data.html}
-
-${data.script}
-
-${data.css}
-`
     try {
-      fs.writeFileSync(vueFile, code)
-      const buildFile = await this.buildFile()
-      if (buildFile) {
+      if (data.name.indexOf('.vue') > -1) {
+        const code = `${data.html}
+  
+        ${data.script}
+        
+        ${data.css}
+        `
+        fs.writeFileSync(path, code)
+        // const buildFile = await this.buildFile()
+        // if (buildFile) {
+        //   return {
+        //     msg: '成功'
+        //   }
+        // } else {
+        //   return {
+        //     msg: '构建失败',
+        //     code: 1
+        //   }
+        // }
         return {
           msg: '成功'
         }
       } else {
+        fs.writeFileSync(path, data.html || data.css || data.script)
         return {
-          msg: '构建失败',
-          code: 1
+          msg: '成功'
         }
       }
     } catch (err) {
@@ -209,9 +293,113 @@ ${data.css}
     }
   }
 
-  async getCatalog() {
+  async getCatalog(body: ProjectDto) {
+    const path = join(viewProject, body.name)
+    if (!existsSync(path)) {
+      return {
+        msg: '不存在改项目',
+        code: 1
+      }
+    }
+    return this.getFileCatalog(path, 0, path)
     // const catalog = readdirSync(`${fileProject.templatePath}`)
     // console.log(catalog)
-    return this.getFileCatalog(`${fileProject.templatePath}`, 0)
+  }
+
+  async getProject() {
+    const fileList = readdirSync(viewProject)
+    // TO:DO 换成读数据库
+    return [
+      {
+        projectName: fileList[0],
+        modelName: 'react'
+      },
+      {
+        projectName: fileList[1],
+        modelName: 'vue'
+      }
+    ]
+  }
+
+  async getSignalList() {
+    return {
+      signalList: this.signalList
+    }
+  }
+
+  async killProject(body: ProjectDto) {
+    if (this.signalList[body.name]) {
+      // const endProcess = spawn('kill', [this.signalList[body.name]])
+      // const endProcess = spawn('cmd.exe', [
+      //   '/c',
+      //   'taskkill',
+      //   'pid',
+      //   this.signalList[body.name],
+      //   '/f',
+      //   '/t'
+      // ])
+      // endProcess.stdout.on('data', function (data) {
+      //   console.log('standard output:\n' + data)
+      // })
+      // endProcess.stderr.on('data', function (data) {
+      //   console.log('standard error output:\n' + data)
+      // })
+      // console.log(this.processList[body.name])
+      // console.log(platform())
+      // if (this.processList[body.name].kill(this.signalList[body.name])) {
+      //   delete this.processList[body.name]
+      //   delete this.signalList[body.name]
+      //   return {
+      //     msg: `杀死进程了 ${body.name}`
+      //   }
+      // } else {
+      //   return {
+      //     msg: `未杀死进程 ${body.name}`
+      //   }
+      // }
+      const port = '3003'
+
+      const killProcess = await this.killPort(port)
+      if (killProcess) {
+        return {
+          msg: `杀死进程了 ${body.name}`
+        }
+      } else {
+        return {
+          msg: `未杀死进程 ${body.name}`
+        }
+      }
+    } else {
+      return {
+        msg: '不存在改项目',
+        code: 1
+      }
+    }
+    // spawn('kill', ['-9', ])
+  }
+
+  async setCmd(body: ProjectDto) {
+    // const controller = new AbortController()
+    // const { signal } = controller
+    // console.log(signal)
+    // this.signalList.push(signal)
+    const path = `${viewProject}/${body.name}`
+    if (!existsSync(path)) {
+      return {
+        msg: '不存在改项目',
+        code: 1
+      }
+    }
+    const run = await this.runProject(path, body.name)
+    if (run) {
+      return {
+        msg: `运行成功，${body.name}`
+      }
+    } else {
+      return {
+        msg: `运行失败，${body.name}`,
+        code: 1
+      }
+    }
   }
 }
