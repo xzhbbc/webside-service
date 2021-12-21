@@ -1,0 +1,10 @@
+{
+  "type": "mongodb",
+  "host": "localhost",
+  "port": 27018,
+  "username": "admin",
+  "password": "123456",
+  "database": "idedb",
+  "entities": ["dist/**/*.entity{.ts,.js}"],
+  "synchronize": true
+}

@@ -1,3 +1,11 @@
+/*
+ * @Author: your name
+ * @Date: 2021-11-09 17:26:40
+ * @LastEditTime: 2021-12-20 10:19:01
+ * @LastEditors: your name
+ * @Description: 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ * @FilePath: \webide-service\src\main.ts
+ */
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { createLogger } from './help/logging'
@@ -35,6 +43,6 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, options)
     SwaggerModule.setup('swagger', app, document)
   }
-  await app.listen(4500)
+  await app.listen(4000)
 }
 bootstrap()

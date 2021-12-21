@@ -3,7 +3,7 @@ import { FileService } from './file.service'
 import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger'
 import { UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
-import { CodeDto, FileDto, ProjectDto } from "@/module/file/file.swagger";
+import { CodeDto, FileDto, ProjectDto } from '@/module/file/file.swagger'
 @ApiTags('file:新建页面')
 @ApiBearerAuth()
 @Controller('file')

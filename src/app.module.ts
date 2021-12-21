@@ -5,9 +5,22 @@ import { AuthModule } from '@/module/auth/auth.module'
 import { APP_FILTER } from '@nestjs/core'
 import { HttpExceptionFilter } from '@/help/interceptor/http-exception.filter'
 import { FileModule } from '@/module/file/file.module'
+import { TypeOrmModule } from '@nestjs/typeorm'
+import { getConnectionOptions } from 'typeorm'
+import { ProjectModule } from '@/module/project/project.module'
 
 @Module({
-  imports: [AuthModule, FileModule],
+  imports: [
+    TypeOrmModule.forRootAsync({
+      useFactory: async () =>
+        Object.assign(await getConnectionOptions(), {
+          autoLoadEntities: true
+        })
+    }),
+    AuthModule,
+    FileModule,
+    ProjectModule
+  ],
   controllers: [AppController],
   providers: [
     AppService,
