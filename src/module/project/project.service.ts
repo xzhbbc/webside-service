@@ -50,6 +50,12 @@ export class ProjectService {
         code: 1
       }
     }
+    if (!body.modelName) {
+      return {
+        msg: '请填写对应的框架',
+        code: 1
+      }
+    }
     const exist = await this.checkExistProject(body.name)
     if (exist) {
       return exist
@@ -57,6 +63,7 @@ export class ProjectService {
     try {
       const project = new Project()
       project.name = body.name
+      project.modelName = body.modelName
       project.user = this.user
       project.createTime = new Date().getTime()
       project.updateTime = new Date().getTime()

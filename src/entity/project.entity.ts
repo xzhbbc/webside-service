@@ -13,8 +13,13 @@ export class Project {
   @Column()
   user: string
 
+  // 脚手架
   @Column()
   scaffold: string
+
+  // 框架
+  @Column()
+  modelName: string
 
   @Column()
   createTime: number
