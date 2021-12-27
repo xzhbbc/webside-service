@@ -1,8 +1,8 @@
 /*
  * @Author: your name
  * @Date: 2021-11-09 17:26:40
- * @LastEditTime: 2021-12-20 10:19:01
- * @LastEditors: your name
+ * @LastEditTime: 2021-12-27 11:12:03
+ * @LastEditors: Please set LastEditors
  * @Description: 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  * @FilePath: \webide-service\src\main.ts
  */
@@ -14,6 +14,7 @@ import { SuccessInterceptor } from './help/interceptor/success.interceptor'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { fileProject, serviceLogName } from '@/config/constants'
 import { NestExpressApplication } from '@nestjs/platform-express'
+import { CodeHandler } from './utils/codeHandler'
 
 async function bootstrap() {
   const { logger, mw, baseLogger } = await createLogger()
@@ -31,6 +32,7 @@ async function bootstrap() {
   // 注册全局http异常过滤器
   app.useGlobalFilters(new HttpExceptionFilter())
   app.use(mw)
+  CodeHandler.createDir()
   if (process.env.BUILD_ENV != 'prod') {
     const options = new DocumentBuilder()
       .setTitle(`${serviceLogName}`)

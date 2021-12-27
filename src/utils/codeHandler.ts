@@ -1,10 +1,13 @@
 import { exec } from 'child_process'
 import { platform } from 'os'
+import { cacheProject, viewProject } from '@/config/constants'
+import * as chokidar from 'chokidar'
+import { ensureDir } from 'fs-extra'
 
 /*
  * @Author: xzhbbc
  * @Date: 2021-12-20 11:19:30
- * @LastEditTime: 2021-12-20 18:13:26
+ * @LastEditTime: 2021-12-27 11:09:32
  * @LastEditors: Please set LastEditors
  * @Description: 用命令行处理代码
  * @FilePath: \webide-service\src\utils\codeHandler.ts
@@ -96,5 +99,63 @@ export class CodeHandler {
     } else {
       return ''
     }
+  }
+
+  static createProject(name: string, cmd: string) {
+    return new Promise(resolve => {
+      const process = exec(
+        `cd ${cacheProject} && ${cmd}`,
+        (err, stdout, stderr) => {
+          if (err) {
+            console.log(err)
+            resolve(false)
+          }
+          console.log('stdout:', stdout)
+          console.log('stderr:', stderr)
+          process.kill()
+        }
+      )
+      resolve(true)
+    })
+  }
+
+  static watchFile(file: string) {
+    let timer = null
+    let pollCheckTimer = null
+    let noFileChange = false
+    return new Promise(resolve => {
+      const watcher = chokidar.watch(file, {
+        persistent: true
+      })
+      // watcher.add('new-file')
+      watcher.on('raw', (name, path) => {
+        // console.log(name, path)
+        noFileChange = false
+      })
+      // 2秒轮询一次，看是否结束创建
+      pollCheckTimer = setTimeout(() => {
+        if (noFileChange) {
+          watcher.close()
+          timer && clearTimeout(timer)
+          pollCheckTimer && clearTimeout(pollCheckTimer)
+          resolve(true)
+        } else {
+          noFileChange = true
+        }
+      }, 2000)
+      // 50秒后，还为成功，就代表超时失败
+      timer = setTimeout(() => {
+        console.log('超时了======')
+        watcher.close()
+        timer && clearTimeout(timer)
+        pollCheckTimer && clearTimeout(pollCheckTimer)
+        resolve(false)
+      }, 60000 * 3)
+    })
+  }
+
+  static createDir() {
+    ensureDir(viewProject)
+    ensureDir(cacheProject)
   }
 }

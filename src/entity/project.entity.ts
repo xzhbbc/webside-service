@@ -1,4 +1,12 @@
-import { Column, Entity, ObjectID, ObjectIdColumn } from 'typeorm'
+import {
+  Column,
+  Entity,
+  ObjectID,
+  ObjectIdColumn,
+  OneToOne,
+  JoinColumn
+} from 'typeorm'
+import { Scaffold } from '@/entity/scaffold.entity'
 
 @Entity()
 export class Project {
@@ -15,11 +23,7 @@ export class Project {
 
   // 脚手架
   @Column()
-  scaffold: string
-
-  // 框架
-  @Column()
-  modelName: string
+  scaffold: Scaffold
 
   @Column()
   createTime: number

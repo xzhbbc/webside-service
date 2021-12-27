@@ -18,6 +18,8 @@ export const fileProject = {
 
 export const viewProject = join(__dirname, '../../project')
 
+export const cacheProject = join(__dirname, '../../cache')
+
 export const canWriteFile = 'src/views'
 
 export const codeTemplate = {

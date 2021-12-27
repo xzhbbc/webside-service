@@ -15,6 +15,7 @@ import { ProjectService } from '@/module/project/project.service'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { Project } from '@/entity/project.entity'
 import { Service } from '@/entity/service.entity'
+import { Scaffold } from '@/entity/scaffold.entity'
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { Service } from '@/entity/service.entity'
     JwtModule.register({
       secret: jwtSecret
     }),
-    TypeOrmModule.forFeature([Project, Service])
+    TypeOrmModule.forFeature([Project, Service, Scaffold])
   ],
   controllers: [ProjectController],
   providers: [ProjectService]
